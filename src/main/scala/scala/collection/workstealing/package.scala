@@ -1,12 +1,8 @@
 package scala.collection
 
-
-
 import sun.misc.Unsafe
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
-
-
 
 package object workstealing {
 
@@ -57,7 +53,8 @@ package object workstealing {
       inliner.transform(tree)
     }
 
-    /** Returns the selection prefix of the current macro application.
+    /**
+     * Returns the selection prefix of the current macro application.
      */
     def applyPrefix = c.macroApplication match {
       case Apply(TypeApply(Select(prefix, name), targs), args) =>
@@ -70,9 +67,10 @@ package object workstealing {
         prefix
     }
 
-    /** Used to generate a local val for a function expression,
+    /**
+     * Used to generate a local val for a function expression,
      *  so that the function value is created only once.
-     * 
+     *
      *  If `f` is a function literal, returns the literal.
      *  Otherwise, stores the function literal to a local value
      *  and returns a pair of the local value definition and an ident tree.
@@ -83,28 +81,6 @@ package object workstealing {
       case _ =>
         val localname = newTermName("localf$0")
         (c.Expr[Unit](ValDef(Modifiers(), localname, TypeTree(), f.tree)), c.Expr[F](Ident(localname)))
-    }
-
-  }
-
-}
-
-
-package workstealing {
-
-  object Utils {
-
-    val unsafe = getUnsafe()
-  
-    def getUnsafe(): Unsafe = {
-      if (this.getClass.getClassLoader == null) Unsafe.getUnsafe()
-      try {
-        val fld = classOf[Unsafe].getDeclaredField("theUnsafe")
-        fld.setAccessible(true)
-        return fld.get(this.getClass).asInstanceOf[Unsafe]
-      } catch {
-        case e: Throwable => throw new RuntimeException("Could not obtain access to sun.misc.Unsafe", e)
-      }
     }
 
   }

@@ -31,7 +31,7 @@ trait Workstealing[T] {
     final def isLeaf = left eq null
 
     @tailrec final def tryOwn(thiz: Owner): Boolean = {
-      val currowner = /*READ*/owner
+      val currowner = /*READ*/ Utils.readVolatile(this.owner)
       if (currowner eq thiz) true
       else if (currowner != null) false
       else if (CAS_OWNER(currowner, thiz)) true
@@ -98,7 +98,7 @@ trait Workstealing[T] {
      *  Return false if node was completed.
      */
     @tailrec def expand(kernel: Kernel[S, R], worker: Worker): Boolean = {
-      val child_t0 = /*READ*/child
+      val child_t0 = /*READ*/Utils.readVolatile(this.child)
       if (!child_t0.isLeaf) true else { // already expanded
         // first set progress to -progress
         val state_t1 = child_t0.state
@@ -182,11 +182,16 @@ trait Workstealing[T] {
   }
 
   def joinWorkT[R](root: Ptr[T, R]) = {
-    var r = /*READ*/root.child.result
+    var c = /*READ_PREPARE*/ Utils.readVolatile(root.child)
+    var r = /*READ*/ Utils.readVolatile(c.result)
     if (r == null || r.isEmpty) root.synchronized {
-      r = /*READ*/root.child.result
+      c = /*READ_PREPARE*/ Utils.readVolatile(root.child)
+      r = /*READ*/ Utils.readVolatile(c.result)
+      
       while (r == null || r.isEmpty) {
-        r = /*READ*/root.child.result
+        c = /*READ_PREPARE*/ Utils.readVolatile(root.child)
+        r = /*READ*/ Utils.readVolatile(c.result)
+      
         root.wait()
       }
     }
@@ -216,12 +221,17 @@ trait Workstealing[T] {
   }
 
   def joinWorkFJ[R](root: Ptr[T, R]) = {
-    var r = /*READ*/root.child.result
+    var c = /*READ_PREPARE*/ Utils.readVolatile(root.child)
+    var  r = /*READ*/ Utils.readVolatile(c.result)
+      
     if (r == null || r.isEmpty) root.synchronized {
-      r = /*READ*/root.child.result
+      c = /*READ_PREPARE*/ Utils.readVolatile(root.child)
+      r = /*READ*/ Utils.readVolatile(c.result)
+      
       while (r == null || r.isEmpty) {
         root.wait()
-        r = /*READ*/root.child.result
+        c = /*READ_PREPARE*/ Utils.readVolatile(root.child)
+        r = /*READ*/ Utils.readVolatile(c.result)     
       }
     }
   }
@@ -279,7 +289,7 @@ trait Workstealing[T] {
      *  May be overridden in subclass to specialize for better performance.
      */
     def workOn(tree: Ptr[S, R], worker: Worker): Boolean = {
-      val node = /*READ*/tree.child
+      val node = /*READ*/Utils.readVolatile(tree.child)
       beforeWorkOn(tree, node)
       var lsum = node.lresult
       var incCount = 0
@@ -287,8 +297,8 @@ trait Workstealing[T] {
       val ms = maximumChunkSize
       var looping = true
       while (looping && notTerminated) {
-        val currstep = /*READ*/node.step
-        val currstate = /*READ*/node.state
+        val currstep = /*READ*/Utils.readVolatile(node.step)
+        val currstate = /*READ*/Utils.readVolatile(node.state)
   
         if (currstate != Completed && currstate != StolenOrExpanded) {
           // reserve some work
@@ -347,7 +357,9 @@ trait Workstealing[T] {
     }
     
     @tailrec private def pushUp(tree: Ptr[S, R]) {
-      val r = /*READ*/tree.child.result
+      val c = /*READ_PREPARE*/ Utils.readVolatile(tree.child)
+      val r = /*READ*/ Utils.readVolatile(c.result)
+      
       r match {
         case null =>
           // we're done, owner did not finish his work yet
@@ -358,8 +370,15 @@ trait Workstealing[T] {
             if (tree.child.isLeaf) Some(tree.child.lresult)
             else {
               // check if result already set for children
-              val leftresult = /*READ*/tree.child.left.child.result
-              val rightresult = /*READ*/tree.child.right.child.result
+              val treeChild = /*READ_PREPARE*/ Utils.readVolatile(tree.child) 
+              val leftChild = treeChild.left
+              val leftChildChild = /*READ_PREPARE*/ Utils.readVolatile(leftChild.child) 
+              val leftresult = /*READ*/ Utils.readVolatile(leftChildChild.result)
+
+              val rightChild = treeChild.right
+              val rightChildChild = /*READ_PREPARE*/ Utils.readVolatile(rightChild.child)
+              val rightresult = /*READ*/Utils.readVolatile(rightChildChild.result)
+
               (leftresult, rightresult) match {
                 case (Some(lr), Some(rr)) =>
                   val r = combine(tree.child.lresult, combine(lr, rr))
@@ -657,7 +676,7 @@ object Workstealing {
 
     @tailrec def findWork[S, R](worker: Worker, tree: Tree[S, R], kernel: Kernel[S, R]) = {
       def search(current: Tree[S, R]): Tree[S, R] = {
-        val node = /*READ*/current.child
+        val node = /*READ*/Utils.readVolatile(current.child)
         if (node.isLeaf) {
           if (node.isEligible(worker)) current else null
         } else {
@@ -673,7 +692,7 @@ object Workstealing {
 
       val max = search(tree)
       if (max != null) {
-        val node = /*READ*/max.child
+        val node = /*READ*/Utils.readVolatile(max.child)
         if (node.tryOwn(worker)) max
         else if (node.trySteal(max, kernel, worker)) {
           val subnode = chooseAsStealer(worker.index, worker.total, max)

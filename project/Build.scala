@@ -80,8 +80,14 @@ object WorkstealingBuild extends Build {
     "root",
     file("."),
     settings = BuildSettings.buildSettings ++ Seq(benchTask, javaCommandSetting, benchVerboseTask)
-  )
+  ) dependsOn(macros)
 
+  lazy val macros: Project = Project(
+    "macros",
+    file("macros"),
+     settings = BuildSettings.buildSettings ++ Seq(benchTask, javaCommandSetting, benchVerboseTask) ++ Seq( name:= 
+"workstealing-macros")
+  )	
 }
 
 

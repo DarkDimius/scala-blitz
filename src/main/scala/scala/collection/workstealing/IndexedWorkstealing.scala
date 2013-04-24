@@ -49,28 +49,28 @@ trait IndexedWorkstealing[T] extends Workstealing[T] {
     /* node interface */
 
     final def elementsRemaining = {
-      val r = /*READ*/range
+      val r = /*READ*/Utils.readVolatile(this.range)
       val p = positiveProgress(r)
       val u = until(r)
       u - p
     }
 
     final def elementsCompleted = {
-      val r = /*READ*/range
+      val r = /*READ*/Utils.readVolatile(this.range)
       val p = positiveProgress(r)
       val u = until(r)
       (p - start) + (end - u)
     }
 
     final def state = {
-      val range_t0 = /*READ*/range
+      val range_t0 = /*READ*/Utils.readVolatile(this.range)
       if (completed(range_t0)) Workstealing.Completed
       else if (stolen(range_t0)) Workstealing.StolenOrExpanded
       else Workstealing.AvailableOrOwned
     }
 
     final def advance(step: Int): Int = {
-      val range_t0 = /*READ*/range
+      val range_t0 = /*READ*/Utils.readVolatile(this.range)
       if (stolen(range_t0) || completed(range_t0)) -1
       else {
         val p = progress(range_t0)
@@ -85,13 +85,13 @@ trait IndexedWorkstealing[T] extends Workstealing[T] {
     }
 
     final def markCompleted(): Boolean = {
-      val range_t0 = /*READ*/range
+      val range_t0 = /*READ*/Utils.readVolatile(this.range)
       if (completed(range_t0) || stolen(range_t0)) false
       else CAS_RANGE(range_t0, createCompleted(range_t0))
     }
 
     final def markStolen(): Boolean = {
-      val range_t0 = /*READ*/range
+      val range_t0 = /*READ*/Utils.readVolatile(this.range)
       if (completed(range_t0) || stolen(range_t0)) false
       else CAS_RANGE(range_t0, createStolen(range_t0))
     }
@@ -106,7 +106,7 @@ trait IndexedWorkstealing[T] extends Workstealing[T] {
     def isNotRandom = false
 
     override def workOn(tree: Ptr[S, R], worker: Workstealing.Worker): Boolean = {
-      val rawn = /*READ*/tree.child
+      val rawn = /*READ*/Utils.readVolatile(tree.child)
       beforeWorkOn(tree, rawn)
       val node = rawn.repr
       var lsum = zero
@@ -117,8 +117,8 @@ trait IndexedWorkstealing[T] extends Workstealing[T] {
       var looping = true
       val rand = Workstealing.localRandom
       while (looping && notTerminated) {
-        val currstep = /*READ*/node.step
-        val currrange = /*READ*/node.range
+        val currstep = /*READ*/ Utils.readVolatile(node.step)
+        val currrange = /*READ*/ Utils.readVolatile(node.range)
         val p = progress(currrange)
         val u = until(currrange)
   
@@ -177,7 +177,8 @@ trait IndexedWorkstealing[T] extends Workstealing[T] {
     }
     
     @tailrec private def pushUp(tree: Ptr[S, R]) {
-      val r = /*READ*/tree.child.result
+      val child = /*READ_PREPARE*/ Utils.readVolatile(tree.child)
+      val r = /*READ*/Utils.readVolatile(child.result)
       r match {
         case null =>
           // we're done, owner did not finish his work yet
@@ -188,8 +189,14 @@ trait IndexedWorkstealing[T] extends Workstealing[T] {
             if (tree.child.isLeaf) Some(combine(tree.child.repr.lresult, tree.child.repr.rresult))
             else {
               // check if result already set for children
-              val leftresult = /*READ*/tree.child.left.child.result
-              val rightresult = /*READ*/tree.child.right.child.result
+              val treeChild = /*READ_PREPARE*/ Utils.readVolatile(tree.child) 
+              val leftChild = treeChild.left
+              val leftChildChild = /*READ_PREPARE*/ Utils.readVolatile(leftChild.child) 
+              val leftresult = /*READ*/ Utils.readVolatile(leftChildChild.result)
+
+              val rightChild = treeChild.right
+              val rightChildChild = /*READ_PREPARE*/ Utils.readVolatile(rightChild.child)
+              val rightresult = /*READ*/Utils.readVolatile(rightChildChild.result)
               (leftresult, rightresult) match {
                 case (Some(lr), Some(rr)) =>
                   val r = combine(tree.child.lresult, combine(lr, combine(rr, tree.child.repr.rresult)))

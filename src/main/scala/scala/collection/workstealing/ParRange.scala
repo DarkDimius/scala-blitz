@@ -35,7 +35,7 @@ with IndexedWorkstealing[Int] {
     def hasNext: Boolean = nextProgress < nextUntil
 
     def newExpanded(parent: Ptr[Int, R], worker: Workstealing.Worker, kernel: Kernel[Int, R]): RangeNode[R] = {
-      val r = /*READ*/range
+      val r = /*READ*/Utils.readVolatile(this.range)
       val p = positiveProgress(r)
       val u = until(r)
       val remaining = u - p
