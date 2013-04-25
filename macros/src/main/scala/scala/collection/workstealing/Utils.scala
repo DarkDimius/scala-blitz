@@ -21,7 +21,17 @@ package workstealing {
     }
 
     def readVolatile[T](l: T): T = macro readVolatile_impl[T]
-    def getBaseAndOffset(f:java.lang.reflect.Field, c:java.lang.Class[Any]):(java.lang.Class[Any],Long) = ???
+    def getFieldBaseAndOffset(c: Any, name:String):(Any,Long) = {
+      val field =  c.getClass.getDeclaredField(name)
+      val isStatic = java.lang.reflect.Modifier.isStatic(field.getModifiers())
+      isStatic match {
+        case true =>
+          (unsafe.staticFieldBase(field),unsafe.staticFieldOffset(field))
+        case false =>
+          (c, unsafe.objectFieldOffset(field))
+
+      }
+    }
     
     
     def readVolatile_impl[T: c.WeakTypeTag](c: Context)(l: c.Expr[T]): c.Expr[T] = {
@@ -34,65 +44,49 @@ package workstealing {
           l.actualType match {
             case x if (x =:= typeOf[Int]) => reify {
               {
-                val ob = objRef.splice
-                val obField = ob.getClass.getDeclaredField(name.splice)
-                val offset = unsafe.fieldOffset(obField)
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
                 unsafe.getIntVolatile(ob, offset).asInstanceOf[T]
               }
             }
             case x if (x =:= typeOf[Long]) => reify {
               {
-                val ob = objRef.splice
-                val obField = ob.getClass.getDeclaredField(name.splice)
-                val offset = unsafe.fieldOffset(obField)
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
                 unsafe.getLongVolatile(ob, offset).asInstanceOf[T]
               }
             }
             case x if (x =:= typeOf[Byte]) => reify {
               {
-                val ob = objRef.splice
-                val obField = ob.getClass.getDeclaredField(name.splice)
-                val offset = unsafe.fieldOffset(obField)
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
                 unsafe.getByteVolatile(ob, offset).asInstanceOf[T]
               }
             }
             case x if (x =:= typeOf[Boolean]) => reify {
               {
-                val ob = objRef.splice
-                val obField = ob.getClass.getDeclaredField(name.splice)
-                val offset = unsafe.fieldOffset(obField)
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
                 unsafe.getBooleanVolatile(ob, offset).asInstanceOf[T]
               }
             }
             case x if (x =:= typeOf[Double]) => reify {
               {
-                val ob = objRef.splice
-                val obField = ob.getClass.getDeclaredField(name.splice)
-                val offset = unsafe.fieldOffset(obField)
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
                 unsafe.getDoubleVolatile(ob, offset).asInstanceOf[T]
               }
             }
             case x if (x =:= typeOf[Float]) => reify {
               {
-                val ob = objRef.splice
-                val obField = ob.getClass.getDeclaredField(name.splice)
-                val offset = unsafe.fieldOffset(obField)
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
                 unsafe.getFloatVolatile(ob, offset).asInstanceOf[T]
               }
             }
             case x if (x =:= typeOf[Short]) => reify {
               {
-                val ob = objRef.splice
-                val obField = ob.getClass.getDeclaredField(name.splice)
-                val offset = unsafe.fieldOffset(obField)
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
                 unsafe.getShortVolatile(ob, offset).asInstanceOf[T]
               }
             }
             case x if (x <:< typeOf[java.lang.Object]) => reify {
               {
-                val ob = objRef.splice
-                val obField = ob.getClass.getDeclaredField(name.splice)
-                val offset = unsafe.fieldOffset(obField)
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
                 unsafe.getObjectVolatile(ob, offset).asInstanceOf[T]
               }
             }
