@@ -78,6 +78,12 @@ package workstealing {
                 unsafe.getFloatVolatile(ob, offset).asInstanceOf[T]
               }
             }
+            case x if (x =:= typeOf[Char]) => reify {
+              {
+                val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
+                unsafe.getCharVolatile(ob, offset).asInstanceOf[T]
+              }
+            }
             case x if (x =:= typeOf[Short]) => reify {
               {
                 val (ob,offset) = getFieldBaseAndOffset(objRef.splice, name.splice)
