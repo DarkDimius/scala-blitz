@@ -33,6 +33,23 @@ package workstealing {
       }
     }
     
+    val offsetsCache = mutable.Map[(String, String), (Any, Long)]()
+
+    def getCachedFieldBaseAndOffset(c: Any, name: String): (Any, Long) = {
+      val cz = c.getClass()
+      offsetsCache.getOrElseUpdate((cz.getName(), name), {
+        val field = cz.getDeclaredField(name)
+        val isStatic = java.lang.reflect.Modifier.isStatic(field.getModifiers())
+        isStatic match {
+          case true =>
+            (unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field))
+          case false =>
+            (c, unsafe.objectFieldOffset(field))
+
+        }
+      })
+
+    }
     
     def readVolatile_impl[T: c.WeakTypeTag](c: Context)(l: c.Expr[T]): c.Expr[T] = {
       import c.universe._
