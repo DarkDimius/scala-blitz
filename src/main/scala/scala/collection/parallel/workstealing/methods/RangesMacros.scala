@@ -47,17 +47,17 @@ object RangesMacros {
   def sum[U >: Int: c.WeakTypeTag](c: Context)(num: c.Expr[Numeric[U]],ctx: c.Expr[WorkstealingTreeScheduler]): c.Expr[U] = {
     import c.universe._
     
-    //val (numv, numg) = c.functionExpr2Local[Numeric[U]](num)
+    val (numv, numg) = c.functionExpr2Local[Numeric[U]](num)
     val zero = reify {
-      num.splice.zero
+      numg.splice.zero
     }
     val op = reify {
-      (x: U, y: U) => num.splice.plus(x, y)
+      (x: U, y: U) => numg.splice.plus(x, y)
     }
     val (lv, oper: c.Expr[(U, U) => U]) = c.functionExpr2Local[(U, U) => U](op)
 
 
-    makeKernel_Impl[U, U, U](c)(lv)(zero)(oper)(A0_RETURN_ZERO(c), A1_SUM[U](c)(oper), AN_SUM[U](c)(oper))(ctx)(true)
+    makeKernel_Impl[U, U, U](c)(lv,numv)(zero)(oper)(A0_RETURN_ZERO(c), A1_SUM[U](c)(oper), AN_SUM[U](c)(oper))(ctx)(true)
   }
 
   def product[U >: Int: c.WeakTypeTag](c: Context)(num: c.Expr[Numeric[U]],ctx: c.Expr[WorkstealingTreeScheduler]): c.Expr[U] = {

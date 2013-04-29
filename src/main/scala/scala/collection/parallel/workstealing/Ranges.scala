@@ -126,12 +126,17 @@ object RangeKernel {
         (kernel, result)
       }
     val newChildren = initilizers.flatMap{initilizer=> initilizer.tree.children}.toList
+    println("\n\n ----------------------- NEW CHILDREN -------------------------\n")
+   newChildren.foreach(x=> println(show(x)))
     val resultTree = resultWithoutInit.tree match {
       case Block((children,expr))=> Block(newChildren::: children,expr)
       case _=> c.abort(resultWithoutInit.tree.pos , "failed to get kernel as block "+resultWithoutInit.isInstanceOf[Block].toString)
     }
-    val result = c.Expr[Tuple2[Ranges.RangeKernel[R], R]](resultTree)
+        println("\n\n ----------------------- RESULT -------------------------\n")
 
+    val result = c.Expr[Tuple2[Ranges.RangeKernel[R], R]](resultTree)
+    println(show(result))
+        println("\n\n ----------------------- END RESULT -------------------------\n")
     val operation = if (allowZeroRezult) reify { result.splice._2.asInstanceOf[RR] }
     else reify {
       val res = result.splice

@@ -70,19 +70,14 @@ class RangeTest extends FunSuite with Timeouts {
     testFold(0)
     runForSizes(testFold)
   }
-  /*
-[error] scala.MatchError: workstealing.Ops.rangeOps(pr).aggregate[Int](0)(((x$13: Int, x$14: Int) => x$13.+(x$14)))(((x$15: Int, x$16: Int) => x$15.+(x$16)))(RangeTest.this.scheduler) (of class scala.reflect.internal.Trees$ApplyToImplicitArgs)
-[error] 	at scala.collection.parallel.workstealing.package$Util.applyPrefix(package.scala:78)
-[error] 	at scala.collection.parallel.workstealing.RangeKernel$.makeKernel_Impl(Ranges.scala:107)
-[error] 	at scala.collection.parallel.workstealing.methods.RangesMacros$.aggregate(RangesMacros.scala:44)
 
   def testAggregate(sz: Int): Unit = try {
     failAfter(1 seconds) {
       val r = 0 until sz
-      val x = r.aggregate(0)(_+_,_+_)
+      val x = r.aggregate(0)(_ + _, _ + _)
 
       val pr = r.toPar
-      val px = pr.aggregate(0)(_+_)(_+_)
+      val px = pr.aggregate(0)(_ + _)(_ + _)
 
       assert(x == px, x + ", " + px)
     }
@@ -92,20 +87,17 @@ class RangeTest extends FunSuite with Timeouts {
   }
 
   test("aggregate") {
-    intercept[UnsupportedOperationException] {
-      testAggregate(0)
-    }
+    testAggregate(0)
     runForSizes(testAggregate)
   }
 
- */
   def testSum(sz: Int): Unit = try {
     failAfter(1 seconds) {
       val r = 0 until sz
       val x = r.sum
 
       val pr = r.toPar
-      val px = pr.sum
+       val px = pr.sum
 
       assert(x == px, x + ", " + px)
     }
@@ -155,10 +147,9 @@ class RangeTest extends FunSuite with Timeouts {
   }
 
   test("min") {
-  /*  intercept[UnsupportedOperationException] {
+    /*  intercept[UnsupportedOperationException] {
       testMin(0)
     } */
-
 
     runForSizes(testMin)
   }
@@ -179,7 +170,7 @@ class RangeTest extends FunSuite with Timeouts {
   }
 
   test("max") {
-  /*  intercept[UnsupportedOperationException] {
+    /*  intercept[UnsupportedOperationException] {
       testMax(0)
     } */
     runForSizes(testMax)
