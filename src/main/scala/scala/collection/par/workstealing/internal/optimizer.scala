@@ -133,7 +133,7 @@ class Optimizer[C <: Context](val c: C) {
 
   def inlineAndReset[T](expr: c.Expr[T]): c.Expr[T] = {
     val inliner = new Inlining.Optimization
-    c.Expr[T](c resetAllAttrs inliner.transform(expr.tree))
+    c.Expr[T](c resetLocalAttrs inliner.transform(expr.tree))
   }
 
   /* fusion */
