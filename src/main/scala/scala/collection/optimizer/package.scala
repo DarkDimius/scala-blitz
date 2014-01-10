@@ -15,6 +15,70 @@ package object optimizer {
 
   def optimize[T](exp: T) = macro optimize_impl[T]
 
+  def _p[T](exp: T) = macro p_impl[T]
+
+  val colorMap = Map(0 -> "black", 1 -> "red", 2 -> "blue")
+
+  def p_impl[T: c.WeakTypeTag](c: WhiteboxContext)(exp: c.Expr[T]) = {
+
+    import c.universe._
+    import Flag._
+
+    val transitions = collection.mutable.Map[Tree,List[(Tree, Int)]]()
+
+    object FindMatch extends Transformer {
+      override def transform(tree: Tree): Tree = {
+        tree match {
+          case q"$seq.$method[..$targs](...$args)" => //map, fold
+            val symb = seq.symbol
+            println(s"seq is $seq,\n $symb\n method is $method\n targs is $targs\n args is $args\n")
+            val exprs = seq  :: args.flatten
+            transitions(tree)=(exprs).map(x=> (x,0))
+//            exprs.foreach(super.transform(_))
+
+          case _ => super.transform(tree)
+        }
+
+        tree
+      }
+    }
+
+    val t = FindMatch.transform(exp.tree)
+    println(t)
+    var idx = 0
+    val quote = '\"'
+    val mappings = collection.mutable.Map[Tree, Int]()
+
+    def getKey(t:Tree):Int = {
+      mappings.getOrElseUpdate(t,  {idx = idx + 1; idx})
+    }
+
+    val edges = transitions.flatMap{ t=>
+      val expr = t._1
+      val exprId = getKey(expr)
+      t._2.map{ dep =>
+        val color = colorMap(dep._2)
+        val depId = getKey(dep._1)
+        s"\t $exprId -> $depId [color=$color];\n"
+      }
+
+    }.mkString
+
+    val labels = mappings.map{x=> 
+      val txt = x._1.toString.replace("\"","\\\"")
+      val id = x._2
+      s"\t $id [label = $quote$txt$quote];\n"
+    }.mkString
+    println("labels: " + labels)
+
+    println(s"""graph graphname {
+$labels
+$edges
+  }""")
+
+    (c.resetAllAttrs(t))
+  }
+
   /** Eliminates consecutive Box&Unbox pairs */
   def optimize_postprocess[T](exp: T) = macro optimize_postprocess_impl[T]
 
