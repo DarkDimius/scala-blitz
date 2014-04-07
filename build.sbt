@@ -1,4 +1,6 @@
+useGpg := true
 
+usePgpKeyHex("23079096")
 
 publishMavenStyle := true
 

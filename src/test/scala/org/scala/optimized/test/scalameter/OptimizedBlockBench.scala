@@ -4,18 +4,12 @@ package scalameter
 
 import scala.collection.optimizer._
 import org.scalameter.api._
+import org.scalameter.PerformanceTest.OnlineRegressionReport
 
 
+class OptimizedBlockBench extends OnlineRegressionReport with Serializable with Generators {
 
-class OptimizedBlockBench extends PerformanceTest.Regression with Serializable with Generators {
-
-  /* config */
-
-  def persistor = new SerializationPersistor
-
-
-
-  val opts = Seq(
+  val opts = Context(
     exec.minWarmupRuns -> 50,
     exec.maxWarmupRuns -> 100,
     exec.benchRuns -> 30,
@@ -23,7 +17,7 @@ class OptimizedBlockBench extends PerformanceTest.Regression with Serializable w
     exec.jvmflags -> "-server -Xms3072m -Xmx3072m -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=64m -XX:+UseCondCardMark -XX:CompileThreshold=100 -Dscala.collection.parallel.range.manual_optimizations=true",
     reports.regression.noiseMagnitude -> 0.15)
 
-  val pcopts = Seq(
+  val pcopts = Context(
     exec.minWarmupRuns -> 2,
     exec.maxWarmupRuns -> 4,
     exec.benchRuns -> 4,
@@ -36,7 +30,7 @@ class OptimizedBlockBench extends PerformanceTest.Regression with Serializable w
 
     val small = 250000
     val large = 1500000
-
+/*
     measure method "reduce" in {
       using(arrays(large)) curve ("collections") in { x =>
         x.reduce(_ + _)
@@ -205,7 +199,7 @@ class OptimizedBlockBench extends PerformanceTest.Regression with Serializable w
           }
         }
       }
-    }
+    }*/
 
     measure method "ProjectEuler1" in {
 
@@ -218,7 +212,7 @@ class OptimizedBlockBench extends PerformanceTest.Regression with Serializable w
     }
 
   }
-
+/*
   performance of "Optimized[ImmutableSet]" config (opts: _*) in {
 
     val small = 25000
@@ -287,7 +281,7 @@ class OptimizedBlockBench extends PerformanceTest.Regression with Serializable w
         optimize{x.fold(0)(_ + _)}
       }
     }
-  }
+  }*/
 
 }
 

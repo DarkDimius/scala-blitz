@@ -4,10 +4,11 @@ package scala.collection.par.workstealing.internal
 
 import scala.reflect.macros._
 import scala.collection._
+import scala.reflect.macros.blackbox.Context
 
 
 
-class Optimizer[C <: BlackboxContext](val c: C) {
+class Optimizer[C <: Context](val c: C) {
   import c.universe._
 
   /* utilities */
@@ -73,7 +74,7 @@ class Optimizer[C <: BlackboxContext](val c: C) {
 
   object PureFunction {
     def isUnchecked(tpe: Type) = tpe match {
-      case AnnotatedType(annots, _, _) => annots.exists(_.tpe == uncheckedTpe)
+      case tpe: AnnotatedType => tpe.annotations.exists(_.tpe == uncheckedTpe)
       case _ => false
     }
     def unapply(tt: Tree): Option[Function] = tt match {
@@ -133,7 +134,8 @@ class Optimizer[C <: BlackboxContext](val c: C) {
 
   def inlineAndReset[T](expr: c.Expr[T]): c.Expr[T] = {
     val inliner = new Inlining.Optimization
-    c.Expr[T](c resetAllAttrs inliner.transform(expr.tree))
+    val global = c.universe.asInstanceOf[scala.tools.nsc.Global]
+    c.Expr[T](global.brutallyResetAttrs(inliner.transform(expr.tree).asInstanceOf[global.Tree]).asInstanceOf[c.Tree])
   }
 
   /* fusion */
@@ -275,14 +277,15 @@ class Optimizer[C <: BlackboxContext](val c: C) {
     val inltree = inlineFunctionApply(tree)
     val fustree = flatMapFusion(inltree)
     val opttree = fustree
-    c.Expr[T](c resetAllAttrs opttree)
+    val global = c.universe.asInstanceOf[scala.tools.nsc.Global]
+    c.Expr[T](global.brutallyResetAttrs(opttree.asInstanceOf[global.Tree]).asInstanceOf[c.Tree])
   }
 
 }
 
 
 object Optimizer {
-  implicit def c2opt(c: BlackboxContext) = new Optimizer[c.type](c)
+  implicit def c2opt(c: Context) = new Optimizer[c.type](c)
 }
 
 

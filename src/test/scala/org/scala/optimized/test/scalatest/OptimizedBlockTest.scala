@@ -13,7 +13,7 @@ import scala.collection.optimizer._
 class OptimizedBlockTest extends FunSuite {
 
   import scala.collection._
-
+/*
   test("Range.foreach") {
     val size = 200000
     val elems = 0 until size
@@ -234,5 +234,5 @@ class OptimizedBlockTest extends FunSuite {
       elems.flatMap(x => elems.map(_ + 1).filter(_ % 2 == x % 2)).filter(_ % 2 == 0).sum
     }
     assert(obtained == expected)
-  }
+  }*/
 }
