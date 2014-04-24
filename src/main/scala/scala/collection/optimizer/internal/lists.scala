@@ -77,11 +77,11 @@ object ListMacros {
     val (calleeExpressionv, calleeExpressiong) = c.nonFunctionToLocal[Lists.Ops[T]](c.Expr[Lists.Ops[T]](c.applyPrefix))
     val t =
       q"""$calleeExpressionv
-      var zero$$ = $z
-      val seqop$$ = $seqop
-      val comboop$$ = $combop
-      for(el <- $calleeExpressiong.list.seq) zero$$ = seqop$$(zero$$, el)
-      zero$$
+      var zero = $z
+      val seqop = $seqop
+      val comboop = $combop
+      for(el <- $calleeExpressiong.list.seq) zero = seqop(zero, el)
+      zero
       """
     println(t)
     c.Expr[S](c.untypecheck(t))
