@@ -276,11 +276,13 @@ object ReducablesMacros {
     c.inlineAndReset(operation)
   }
 
-  def mapFilterReduce[T: c.WeakTypeTag, U >: T: c.WeakTypeTag, R: c.WeakTypeTag, Repr: c.WeakTypeTag](c: BlackboxContext)(seqop: c.Expr[(U, ResultCell[R]) => ResultCell[R]])(reducer: c.Expr[(R, R) => R])(ctx: c.Expr[Scheduler]): c.Expr[ResultCell[R]] = {
+  def mapFilterReduce[T: c.WeakTypeTag, U >: T: c.WeakTypeTag, R: c.WeakTypeTag, Repr: c.WeakTypeTag](c: BlackboxContext)(seqop: c.Expr[(U, ResultCell[R]) => ResultCell[R]])
+                                                                                                     (stopPredicate: c.Expr[(U, ResultCell[R]) => Boolean])(reducer: c.Expr[(R, R) => R])(ctx: c.Expr[Scheduler]): c.Expr[ResultCell[R]] = {
     import c.universe._
 
     val (lv, op) = c.nonFunctionToLocal[(R, R) => R](reducer)
     val (mv, mop) = c.nonFunctionToLocal[(U, ResultCell[R]) => ResultCell[R]](seqop)
+    val (stv, stpg) = c.nonFunctionToLocal[(U, ResultCell[R]) => Boolean](stopPredicate)
     val calleeExpression = c.Expr[Reducables.OpsLike[T, Repr]](c.applyPrefix)
     val result = reify {
       import scala._
@@ -289,6 +291,7 @@ object ReducablesMacros {
       import workstealing._
 
       lv.splice
+      stv.splice
       mv.splice
 
       val callee = calleeExpression.splice
@@ -312,10 +315,13 @@ object ReducablesMacros {
         def apply(node: Node[T, ResultCell[R]], chunkSize: Int): ResultCell[R] = {
           val stealer = node.stealer
           var intermediate = node.READ_INTERMEDIATE
-          while (stealer.hasNext) {
+          var stop = false
+          while (stealer.hasNext && !stop) {
             val next = stealer.next
+            stop = stopPredicate.splice(next, intermediate)
             intermediate = mop.splice(next, intermediate)
           }
+          if (stop) setTerminationCause(ResultFound)
           intermediate
         }
       }

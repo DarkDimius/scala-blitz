@@ -42,7 +42,7 @@ object Reducables {
       * discard  new element and return current result;
       * discard current result and return new element.
       */
-    def mapFilterReduce[R](seqop: (T, ResultCell[R]) => ResultCell[R])(reducer: (R, R) => R)(implicit ctx: Scheduler): ResultCell[R] = macro internal.ReducablesMacros.mapFilterReduce[T, T, R, Repr]
+    def mapFilterReduce[R](seqop: (T, ResultCell[R]) => ResultCell[R])(stopPredicate: (T, ResultCell[R]) => Boolean)(reducer: (R, R) => R)(implicit ctx: Scheduler): ResultCell[R] = macro internal.ReducablesMacros.mapFilterReduce[T, T, R, Repr]
     def fold[U >: T](z: => U)(op: (U, U) => U)(implicit ctx: Scheduler): U = macro internal.ReducablesMacros.fold[T, U, Repr]
     def aggregate[S](z: S)(combop: (S, S) => S)(seqop: (S, T) => S)(implicit ctx: Scheduler) = macro internal.ReducablesMacros.aggregate[T, S, Repr]
     def foreach[U >: T](action: U => Unit)(implicit ctx: Scheduler): Unit = macro internal.ReducablesMacros.foreach[T, U, Repr]
